@@ -3,7 +3,7 @@ from abc import  ABC,abstractmethod
 
 class ITaskService(ABC):
     @abstractmethod
-    def create_task(self, task_data):
+    def create_task(self,task_data):
         """Create a new task."""
         pass
 
@@ -23,6 +23,16 @@ class ITaskService(ABC):
         pass
 
     @abstractmethod
-    def list_tasks(self):
+    def get_all_tasks(self,limit:int,offset:int):
         """List all tasks."""
+        pass
+
+    @abstractmethod
+    def get_task_by_user(self,user_id):
+        """List all tasks by user."""
+        pass
+
+    @abstractmethod
+    def get_task_by_project(self,project_id):
+        """List all tasks by project."""
         pass
