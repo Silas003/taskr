@@ -5,16 +5,15 @@ from sqlalchemy.orm import Session
 import os
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    DATABASE_URL = URL.create(
-        drivername="postgresql+psycopg2",
-        username="postgres",
-        password="password",
-        host="localhost",
-        port=5432,
-        database="taskr",
+
+DATABASE_URL = URL.create(
+        drivername=os.getenv("DRIVER"),
+        username=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        database=os.getenv("DB_NAME"),
     )
 
 engine = create_engine(DATABASE_URL)
