@@ -13,6 +13,7 @@ class JwtManager:
         to_encode = {"sub": str(subject)}
         expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
         to_encode.update({"exp": expire})
+        to_encode.update({"type": "access"})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
@@ -22,6 +23,7 @@ class JwtManager:
         to_encode = {"sub": str(subject)}
         expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES))
         to_encode.update({"exp": expire})
+        to_encode.update({"type": "refresh"})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
