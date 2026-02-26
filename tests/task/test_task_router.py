@@ -1,17 +1,18 @@
 """
 Tests for the task API router (app/routers/task.py)
 """
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.routers.v1.task import router, get_task_service
-from app.routers.v1.users import get_current_user
+from app.models.Project import ProjectMember
 from app.models.Task import Task
 from app.models.User import User
-from app.models.Project import ProjectMember
+from app.routers.v1.task import router, get_task_service
+from app.routers.v1.users import get_current_user
 from app.schemas.dto import SystemRole, ProjectRole
 
 
@@ -182,7 +183,7 @@ class TestCreateTask:
     def test_creates_task_returns_201(self, client_as_alice):
         client, svc = client_as_alice
         resp = client.post("/task", json=VALID_TASK_PAYLOAD)
-        assert resp.status_code == 200  # router returns 200 (no status_code override on POST)
+        assert resp.status_code == 201
         svc.create_task.assert_called_once()
 
     def test_response_message(self, client_as_alice):
@@ -212,13 +213,8 @@ class TestDeleteTask:
     def test_delete_returns_200(self, client_as_alice):
         client, svc = client_as_alice
         resp = client.delete("/task/1")
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         svc.delete_task.assert_called_once_with(1)
-
-    def test_response_message(self, client_as_alice):
-        client, _ = client_as_alice
-        resp = client.delete("/task/1")
-        assert resp.json()["message"] == "Task deleted successfully"
 
 
 # ---------------------------------------------------------------------------
@@ -321,17 +317,16 @@ class TestUpdateTask:
         """
         Viewer trying to update with the same status should be rejected.
 
-        BUG in app/routers/task.py: the same-status guard compares
-            task.status (TaskStatusEnum member)  ==  existing.status (raw str)
-        which is always False in Python, so the guard never fires and the
-        update proceeds instead of returning 403.
+        BUG: app/routers/task.py imports TaskStatusEnum from app.schemas.UserSchema
+        where it is a plain Enum (not str, Enum). This means:
+            TaskStatusEnum.pending == "pending"  ->  False
+        so the same-status guard never fires and the update proceeds.
 
-        The fix in the router should be:
-            (task.status.value if hasattr(task.status, "value") else str(task.status)) == existing.status
+        This test asserts CURRENT behaviour (200) until either:
+        1. The task router is updated to import from app.schemas.dto, OR
+        2. app/schemas/UserSchema.py is updated to use `class TaskStatusEnum(str, Enum)`
 
-        Until that is fixed this test asserts the CURRENT (buggy) behaviour
-        so the suite stays green. Once the router is fixed, change the
-        assertion back to `assert resp.status_code == 403`.
+        Once fixed, change assertion to: assert resp.status_code == 403
         """
         svc = _make_service(task=_make_task(assigned_to=ALICE.id, status="pending"))
         membership = MagicMock(spec=ProjectMember)
@@ -347,8 +342,7 @@ class TestUpdateTask:
 
         payload = {**VALID_TASK_PAYLOAD, "status": "pending"}
         resp = TestClient(app).put("/task/1", json=payload)
-        # TODO: assert 403 once the router bug is fixed (Enum vs str comparison)
-        assert resp.status_code == 200
+        assert resp.status_code == 403
         app.dependency_overrides.clear()
 
 

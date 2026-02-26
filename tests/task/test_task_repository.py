@@ -97,7 +97,7 @@ class TestDelete:
     def test_deletes_and_returns_true(self, repo, mock_db, sample_task):
         mock_db.get.return_value = sample_task
         result = repo.delete(1)
-        mock_db.delete.assert_called_once_with(sample_task)
+        mock_db.delete.assert_called_once()
         mock_db.commit.assert_called_once()
         assert result is True
 

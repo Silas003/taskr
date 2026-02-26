@@ -1,13 +1,14 @@
 """
 Tests for TaskService (app/services/task/implementation.py)
 """
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from app.services.task.implementation import TaskService
+import pytest
+
 from app.models.Task import Task
 from app.schemas.dto import TaskCreate, TaskBase, TaskStatusEnum
+from app.services.task.implementation import TaskService
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ class TestUpdateTask:
     def test_delegates_to_repository(self, service, mock_repo, task_base, sample_task):
         mock_repo.update.return_value = sample_task
         result = service.update_task(1, task_base)
-        mock_repo.update.assert_called_once_with(1, task_base)
+        mock_repo.update.assert_called_once_with(1, task_base.dict(exclude_unset=True))
         assert result is sample_task
 
     def test_returns_none_when_task_not_found(self, service, mock_repo, task_base):
