@@ -18,7 +18,7 @@ from app.schemas.dto import UserCreate, UserRead, Token, UserUpdate
 from app.schemas.response import ResponseBase
 from app.services.user.implementation import UserService
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 import os
 
@@ -134,20 +134,110 @@ def user_access_control(
     raise HTTPException(status_code=403, detail="Forbidden")
 
 
-@router.get("", response_model=ResponseBase[List[UserRead]],
-            dependencies=[Depends(get_current_user), Depends(require_system_role(SystemRole.admin))])
-def get_all_users(skip: int = Query(default=0, ge=0),
-                  limit: int = Query(default=10, ge=1, le=100),
+@router.get(
+    "",
+    response_model=ResponseBase[List[UserRead]],
+    dependencies=[Depends(get_current_user), Depends(require_system_role(SystemRole.admin))],
+    summary="List all users (admin only)",
+    description=(
+        "Return a paginated list of all users.\n\n"
+        "Requires system role `admin`."
+    ),
+    responses={
+        200: {
+            "description": "Users retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Users retrieved successfully",
+                        "data": [
+                            {
+                                "id": 1,
+                                "email": "admin@example.com",
+                                "full_name": "Admin User",
+                                "role": "admin",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden – caller is not an admin",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                            "code": "FORBIDDEN",
+                            "message": "Requires system role: ['admin']",
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+def get_all_users(skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
+                  limit: int = Query(default=10, ge=1, le=100, description="Maximum number of users to return"),
                   service: UserService = Depends(get_user_service)):
     users = service.get_all_users(skip=skip, limit=limit)
     # Pydantic can turn list of ORM users into list of UserRead
     user_reads = [UserRead.from_orm(u) for u in users]
-    return ResponseBase(code=HTTPStatus.OK,
-                        message="Users retrieved successfully",
-                        data=user_reads)
+    return ResponseBase(code=HTTPStatus.OK, message="Users retrieved successfully", data=user_reads)
 
 
-@router.post("", response_model=ResponseBase[UserRead], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ResponseBase[UserRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+    description=(
+        "Create a new user account.\n\n"
+        "- Returns 201 on success.\n"
+        "- Returns 400/422 for validation issues.\n"
+        "- Returns 400/409 if the email is already registered."
+    ),
+    responses={
+        201: {
+            "description": "User registered successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 201,
+                        "message": "User registered successfully",
+                        "data": {
+                            "id": 1,
+                            "email": "alice@example.com",
+                            "full_name": "Alice Smith",
+                            "role": "member",
+                        },
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Bad request / user already exists",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "User with email alice@example.com already exists",
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation error (e.g. weak password, invalid email)",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Password does not meet strength requirements",
+                    }
+                }
+            },
+        },
+    },
+)
 def register_user(
         user_in: UserCreate,
         user_service: UserService = Depends(get_user_service),
@@ -167,7 +257,39 @@ def register_user(
         raise to_http_exception(exc)
 
 
-@router.post("/token", response_model=Token, status_code=status.HTTP_200_OK)
+@router.post(
+    "/token",
+    response_model=Token,
+    status_code=status.HTTP_200_OK,
+    summary="Obtain access token",
+    description=(
+        "Authenticate a user with email and password and return a JWT access token.\n\n"
+        "Uses OAuth2PasswordRequestForm (application/x-www-form-urlencoded) with fields `username` and `password`."
+    ),
+    responses={
+        200: {
+            "description": "Authentication successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "<jwt-access-token>",
+                        "token_type": "bearer",
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Invalid credentials",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid username or password",
+                    }
+                }
+            },
+        },
+    },
+)
 def login_for_access_token(
         response: Response,
         form_data: OAuth2PasswordRequestForm = Depends(),
@@ -186,7 +308,6 @@ def login_for_access_token(
     access_token = JwtManager.create_access_token(subject=str(user.id))
     refresh_token = JwtManager.create_refresh_token(subject=str(user.id))
     secure_cookie = os.getenv('ENV', 'development') == 'production'
-    # set cookie expiry explicitly in seconds (based on core settings default)
     from app.core import security as core_security
     try:
         max_age = int(core_security.REFRESH_TOKEN_EXPIRE_MINUTES) * 60
@@ -202,7 +323,44 @@ def login_for_access_token(
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/me", response_model=ResponseBase[UserRead])
+@router.get(
+    "/me",
+    response_model=ResponseBase[UserRead],
+    summary="Get current authenticated user",
+    description=(
+        "Return the profile of the currently authenticated user based on the bearer access token.\n\n"
+        "Requires `Authorization: Bearer <token>`."
+    ),
+    responses={
+        200: {
+            "description": "Current user profile returned",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "User profile retrieved successfully",
+                        "data": {
+                            "id": 1,
+                            "email": "current@example.com",
+                            "full_name": "Current User",
+                            "role": "member",
+                        },
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Unauthorized – missing or invalid token",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid authentication credentials",
+                    }
+                }
+            },
+        },
+    },
+)
 def read_own_user(current_user: User = Depends(get_current_user)) -> ResponseBase[UserRead]:
     """Get the current authenticated user's profile."""
     return ResponseBase(code=HTTPStatus.OK,
@@ -210,7 +368,38 @@ def read_own_user(current_user: User = Depends(get_current_user)) -> ResponseBas
                         data=UserRead.from_orm(current_user))
 
 
-@router.post("/refresh", response_model=Token)
+@router.post(
+    "/refresh",
+    response_model=Token,
+    summary="Refresh access token",
+    description=(
+        "Exchange a valid refresh token (HttpOnly cookie) for a new access token.\n\n"
+        "Requires `refresh` cookie containing a valid refresh JWT."
+    ),
+    responses={
+        200: {
+            "description": "New access token issued",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "<new-jwt-access-token>",
+                        "token_type": "bearer",
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Invalid or missing refresh token",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid authentication credentials",
+                    }
+                }
+            },
+        },
+    },
+)
 def refresh_token(response: Response, refresh: str = Cookie(None)) -> Token:
     """Refresh an access token using a refresh token."""
     if not refresh:
@@ -241,22 +430,108 @@ def refresh_token(response: Response, refresh: str = Cookie(None)) -> Token:
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/logout", response_model=ResponseBase[None])
+@router.get(
+    "/logout",
+    response_model=ResponseBase[None],
+    summary="Logout current user",
+    description="Clear the refresh token cookie to log the user out.",
+    responses={
+        200: {
+            "description": "Logged out successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Logged out successfully",
+                        "data": None,
+                    }
+                }
+            },
+        },
+    },
+)
 def logout(response: Response) -> ResponseBase[None]:
     """Logout by clearing the refresh token cookie."""
     response.delete_cookie(key="refresh")
     return ResponseBase(code=HTTPStatus.OK, message="Logged out successfully", data=None)
 
 
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user",
+    description="Delete a user by id. Only admins or the user themselves (depending on access control) may delete.",
+    responses={
+        204: {"description": "User deleted successfully"},
+        404: {
+            "description": "User not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Forbidden"}
+                }
+            },
+        },
+    },
+)
 def delete_user(id: int, service: UserService = Depends(get_user_service),
                 current_user: User = Depends(user_access_control)):
     """Delete a user by ID."""
     service.delete_user(id)
 
 
-@router.get("/{id}", response_model=ResponseBase[UserRead],
-            dependencies=[Depends(get_current_user), Depends(user_access_control)])
+@router.get(
+    "/{id}",
+    response_model=ResponseBase[UserRead],
+    dependencies=[Depends(get_current_user), Depends(user_access_control)],
+    summary="Get user by id",
+    description=(
+        "Retrieve a specific user by id.\n\n"
+        "Users can fetch their own profile; admins can fetch any user."
+    ),
+    responses={
+        200: {
+            "description": "User profile retrieved",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "User profile retrieved successfully",
+                        "data": {
+                            "id": 1,
+                            "email": "user@example.com",
+                            "full_name": "Example User",
+                            "role": "member",
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "User not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Forbidden"}
+                }
+            },
+        },
+    },
+)
 def read_user(id: int, service: UserService = Depends(get_user_service)):
     """Get a user by ID."""
     user = service.get_user(id)
@@ -264,8 +539,48 @@ def read_user(id: int, service: UserService = Depends(get_user_service)):
                         data=UserRead(**user.__dict__))
 
 
-@router.put("/{id}", response_model=ResponseBase[UserRead],
-            dependencies=[Depends(get_current_user), Depends(user_access_control)])
+@router.put(
+    "/{id}",
+    response_model=ResponseBase[UserRead],
+    dependencies=[Depends(get_current_user), Depends(user_access_control)],
+    summary="Update user",
+    description="Update a user's profile (full_name and/or password).",
+    responses={
+        200: {
+            "description": "User updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "User updated successfully",
+                        "data": {
+                            "id": 1,
+                            "email": "user@example.com",
+                            "full_name": "Updated Name",
+                            "role": "member",
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "User not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "User not found"}
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Forbidden"}
+                }
+            },
+        },
+    },
+)
 def update_user(id: int, user_in: UserUpdate, service: UserService = Depends(get_user_service)):
     """Update a user's profile (full_name and/or password)."""
     updated = service.update_user(id, **user_in.dict(exclude_unset=True))
