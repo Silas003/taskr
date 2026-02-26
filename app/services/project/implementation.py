@@ -53,8 +53,9 @@ class ProjectService(IProjectService):
     def get_project_by_name(self, name):
         return self.repository.get_by_name(name)
 
-    def get_project_by_user(self, user_id):
-        return self.repository.get_by_user(user_id)
+    def get_project_by_user(self, user_id, skip: int = 0, limit: int = 10):
+        """Return projects for a user with offset/limit pagination at the DB level."""
+        return self.repository.get_by_user(user_id, skip=skip, limit=limit)
 
     def add_member(self, project_id: int, user_id: int, role: ProjectRole) -> ProjectMember:
         """Add a member to a project.
@@ -105,4 +106,3 @@ class ProjectService(IProjectService):
 
     def get_project_member(self, project_id: int, user_id: int):
         return self.repository.get_member(project_id, user_id)
-

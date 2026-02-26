@@ -38,8 +38,8 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_user(self, user_id):
-        """Retrieve all projects by user."""
+    def get_by_user(self, user_id, skip: int = 0, limit: int = 10):
+        """Retrieve projects for a user with pagination."""
         pass
 
     @abstractmethod
@@ -112,11 +112,17 @@ class ProjectRepository(IProjectRepository):
     def find_all(self, skip: int = 0, limit: int = 10):
         return self.db.query(Project).offset(skip).limit(limit).all()
 
-    def get_by_user(self, user_id) -> List[Optional[Project]]:
-        user = self.db.get(User, user_id)
-        if user is not None:
-            return user.projects
-        return []
+    def get_by_user(self, user_id, skip: int = 0, limit: int = 10) -> List[Optional[Project]]:
+        # Query by membership and ownership to support pagination at the DB level
+        q = (
+            self.db.query(Project)
+            .outerjoin(ProjectMember, ProjectMember.project_id == Project.id)
+            .filter(
+                (Project.owner_id == user_id) | (ProjectMember.user_id == user_id)
+            )
+            .distinct()
+        )
+        return q.offset(skip).limit(limit).all()
 
     def get_by_name(self, name) -> Optional[Project]:
         return self.db.query(Project).filter(Project.name == name).first()

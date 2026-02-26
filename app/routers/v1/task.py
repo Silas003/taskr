@@ -316,12 +316,17 @@ def update_task(
         },
     },
 )
-def get_task_by_user_id(id: int, service: TaskService = Depends(get_task_service)):
-    task = service.get_task_by_user(id)
+def get_task_by_user_id(
+    id: int,
+    skip: int = Query(0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum tasks to return"),
+    service: TaskService = Depends(get_task_service),
+):
+    task = service.get_task_by_user(id, skip=skip, limit=limit)
     return ResponseBase(
         code=200,
         message="User tasks retrieved successfully",
-        data=task
+        data=task,
     )
 
 
@@ -365,10 +370,15 @@ def get_task_by_user_id(id: int, service: TaskService = Depends(get_task_service
         },
     },
 )
-def get_task_by_project_id(id: int, service: TaskService = Depends(get_task_service)):
-    task = service.get_task_by_project(id)
+def get_task_by_project_id(
+    id: int,
+    skip: int = Query(0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum tasks to return"),
+    service: TaskService = Depends(get_task_service),
+):
+    task = service.get_task_by_project(id, skip=skip, limit=limit)
     return ResponseBase(
         code=200,
         message="Project tasks retrieved successfully",
-        data=task
+        data=task,
     )

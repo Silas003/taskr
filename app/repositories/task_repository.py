@@ -24,7 +24,15 @@ class ITaskRepository(ABC):
     def delete(self, task_id):
         pass
     @abstractmethod
-    def find_all(self,limit:int,offset:int):
+    def find_all(self, limit: int, offset: int):
+        pass
+
+    @abstractmethod
+    def get_task_by_user(self, user_id: int, skip: int = 0, limit: int = 10):
+        pass
+
+    @abstractmethod
+    def get_task_by_project(self, project_id: int, skip: int = 0, limit: int = 10):
         pass
 
 
@@ -62,19 +70,23 @@ class TaskRepository(ITaskRepository):
         self.db.commit()
         return True
 
-    def find_all(self,skip:int,limit:int)-> List[Task]:
-        self.db.query(Task).offset(skip).limit(limit).all()
+    def find_all(self, limit: int, offset: int) -> List[Task]:
+        return self.db.query(Task).offset(offset).limit(limit).all()
 
+    def get_task_by_user(self, user_id: int, skip: int = 0, limit: int = 10) -> List[Task]:
+        return (
+            self.db.query(Task)
+            .filter(Task.assigned_to == user_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-    def get_task_by_user(self,user_id)->List[Task]:
-        user = self.db.get(User,user_id)
-        if user is not None:
-            return user.tasks
-        return []
-
-    def get_task_by_project(self,project_id)->List[Task]:
-        project = self.db.get(Project,project_id)
-        if project is not None:
-            return project.tasks
-        return []
-
+    def get_task_by_project(self, project_id: int, skip: int = 0, limit: int = 10) -> List[Task]:
+        return (
+            self.db.query(Task)
+            .filter(Task.project_id == project_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )

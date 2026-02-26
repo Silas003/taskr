@@ -377,8 +377,13 @@ def delete_project(id: int, service: ProjectService = Depends(get_project_servic
         },
     },
 )
-def get_projects_by_user(user_id: int, service: ProjectService = Depends(get_project_service)):
-    project = service.get_project_by_user(user_id)
+def get_projects_by_user(
+    user_id: int,
+    skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(default=10, ge=1, le=100, description="Maximum projects to return"),
+    service: ProjectService = Depends(get_project_service),
+):
+    project = service.get_project_by_user(user_id, skip=skip, limit=limit)
     return ResponseBase(code=200, message="Projects retrieved successfully", data=project)
 
 

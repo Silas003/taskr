@@ -48,8 +48,10 @@ class TaskService(ITaskService):
     def get_all_tasks(self, limit: int, offset: int):
         return self.repository.find_all(limit, offset)
 
-    def get_task_by_user(self, user_id):
-        return self.repository.get_task_by_user(user_id)
+    def get_task_by_user(self, user_id, skip: int = 0, limit: int = 10):
+        """Return tasks for a user with offset/limit pagination at the DB level."""
+        return self.repository.get_task_by_user(user_id, skip=skip, limit=limit)
 
-    def get_task_by_project(self, project_id):
-        return self.repository.get_task_by_project(project_id)
+    def get_task_by_project(self, project_id, skip: int = 0, limit: int = 10):
+        """Return tasks for a project with offset/limit pagination at the DB level."""
+        return self.repository.get_task_by_project(project_id, skip=skip, limit=limit)
