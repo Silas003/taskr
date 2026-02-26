@@ -10,24 +10,28 @@ class IProjectService(ABC):
         pass
 
     @abstractmethod
-    def get_project(self, project_id):
+    def get_project(self, project_id:int):
         pass
     @abstractmethod
     def get_all_projects(self,limit:int,offset:int):
         pass
 
     @abstractmethod
-    def update_project(self, project_id, project_data):
+    def update_project(self, project_id:int, project_data):
         pass
 
     @abstractmethod
-    def delete_project(self, project_id):
+    def delete_project(self, project_id:int):
         pass
 
     @abstractmethod
-    def get_project_by_name(self,name):
+    def get_project_by_name(self,name:str):
         pass
 
     @abstractmethod
-    def get_project_by_user(self,user_id):
+    def get_project_by_user(self,user_id:int):
+        pass
+
+    @abstractmethod
+    def get_project_members(self,project_id:int,user_id:int):
         pass
