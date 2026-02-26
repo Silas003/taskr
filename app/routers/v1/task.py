@@ -15,7 +15,7 @@ from app.services.project.implementation import ProjectService
 from app.services.task.implementation import TaskService
 
 router = APIRouter(
-    tags=["tasks"],
+    tags=["Tasks"],
     prefix="/task"
 )
 
@@ -26,37 +26,219 @@ def get_task_service(db: Session = Depends(get_db)) -> TaskService:
     return service
 
 
-@router.get("/{id}", response_model=ResponseBase[TaskRead], dependencies=[Depends(get_current_user), Depends(
-    require_project_role(ProjectRole.owner, ProjectRole.editor, ProjectRole.viewer))])
+@router.get(
+    "/{id}",
+    response_model=ResponseBase[TaskRead],
+    dependencies=[Depends(get_current_user), Depends(require_project_role(ProjectRole.owner, ProjectRole.editor, ProjectRole.viewer))],
+    summary="Get task by id",
+    description="Retrieve a single task by its id (requires project membership).",
+    responses={
+        200: {
+            "description": "Task retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Task retrieved successfully",
+                        "data": {
+                            "id": 1,
+                            "title": "Set up CI",
+                            "description": "Configure CI pipeline",
+                            "project_id": 1,
+                            "assigned_to": 2,
+                            "status": "pending",
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Task not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Task not found"}
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden – user not a project member",
+            "content": {
+                "application/json": {
+                    "example": {"detail": {"code": "FORBIDDEN", "message": "Requires project role"}}
+                }
+            },
+        },
+    },
+)
 def get_task(id: int, service: TaskService = Depends(get_task_service)):
     task = service.get_task(id)
     return ResponseBase(code=200, message="Task retrieved successfully", data=task)
 
 
-@router.get("", response_model=ResponseBase[List[TaskRead]], dependencies=[Depends(get_current_user), Depends(
-    require_project_role(ProjectRole.owner, ProjectRole.editor, ProjectRole.viewer))])
-def get_all_tasks(skip: int = Query(0, ge=0),
-                  limit: int = Query(10, ge=1, le=100),
+@router.get(
+    "",
+    response_model=ResponseBase[List[TaskRead]],
+    dependencies=[Depends(get_current_user), Depends(require_project_role(ProjectRole.owner, ProjectRole.editor, ProjectRole.viewer))],
+    summary="List tasks",
+    description="List tasks in projects where the user has at least viewer access.",
+    responses={
+        200: {
+            "description": "Tasks retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Tasks retrieved successfully",
+                        "data": [
+                            {
+                                "id": 1,
+                                "title": "Set up CI",
+                                "description": "Configure CI pipeline",
+                                "project_id": 1,
+                                "assigned_to": 2,
+                                "status": "pending",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden – user not a member of any relevant projects",
+            "content": {
+                "application/json": {
+                    "example": {"detail": {"code": "FORBIDDEN", "message": "Requires project role"}}
+                }
+            },
+        },
+    },
+)
+def get_all_tasks(skip: int = Query(0, ge=0, description="Items to skip for pagination"),
+                  limit: int = Query(10, ge=1, le=100, description="Maximum tasks to return"),
                   service: TaskService = Depends(get_task_service)):
     tasks = service.get_all_tasks(limit=limit, offset=skip)
     return ResponseBase(code=200, message="Tasks retrieved successfully", data=tasks)
 
 
-@router.post("", response_model=ResponseBase[TaskRead], status_code=201,
-             dependencies=[Depends(get_current_user), Depends(
-                 require_project_role(ProjectRole.owner, ProjectRole.editor))])
+@router.post(
+    "",
+    response_model=ResponseBase[TaskRead],
+    status_code=201,
+    dependencies=[Depends(get_current_user), Depends(require_project_role(ProjectRole.owner, ProjectRole.editor))],
+    summary="Create task",
+    description="Create a new task in a project. Requires owner or editor role on the project.",
+    responses={
+        201: {
+            "description": "Task created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 201,
+                        "message": "Task created successfully",
+                        "data": {
+                            "id": 1,
+                            "title": "New Task",
+                            "description": "Task description",
+                            "project_id": 1,
+                            "assigned_to": None,
+                            "status": "pending",
+                        },
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden – requires owner or editor role",
+            "content": {
+                "application/json": {
+                    "example": {"detail": {"code": "FORBIDDEN", "message": "Requires project role"}}
+                }
+            },
+        },
+    },
+)
 def create_task(task: TaskCreate, service: TaskService = Depends(get_task_service)):
     task = service.create_task(task)
     return ResponseBase(code=201, message="Task created successfully", data=task)
 
 
-@router.delete("/{id}", status_code=204, dependencies=[Depends(get_current_user), Depends(
-    require_project_role(ProjectRole.owner, ProjectRole.editor))])
+@router.delete(
+    "/{id}",
+    status_code=204,
+    dependencies=[Depends(get_current_user), Depends(require_project_role(ProjectRole.owner, ProjectRole.editor))],
+    summary="Delete task",
+    description="Delete a task by id. Requires owner or editor role on the project.",
+    responses={
+        204: {"description": "Task deleted successfully"},
+        403: {
+            "description": "Forbidden – requires owner or editor role",
+            "content": {
+                "application/json": {
+                    "example": {"detail": {"code": "FORBIDDEN", "message": "Requires project role"}}
+                }
+            },
+        },
+        404: {
+            "description": "Task not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Task not found"}
+                }
+            },
+        },
+    },
+)
 def delete_task(id: int, service: TaskService = Depends(get_task_service)):
     return service.delete_task(id)
 
 
-@router.put("/{id}", response_model=ResponseBase[TaskBase])
+@router.put(
+    "/{id}",
+    response_model=ResponseBase[TaskBase],
+    summary="Update task",
+    description=(
+        "Update an existing task.\n\n"
+        "- Owners/editors can update all fields.\n"
+        "- Viewers assigned to the task can update status only."
+    ),
+    responses={
+        200: {
+            "description": "Task updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Task updated successfully",
+                        "data": {
+                            "id": 1,
+                            "title": "Updated Task",
+                            "description": "Updated description",
+                            "project_id": 1,
+                            "assigned_to": 2,
+                            "status": "in_progress",
+                        },
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Forbidden – user cannot update this task",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "You do not have permission to update this task"}
+                }
+            },
+        },
+        404: {
+            "description": "Task not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Task not found"}
+                }
+            },
+        },
+    },
+)
 def update_task(
         id: int,
         task: TaskBase,
@@ -69,10 +251,8 @@ def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     membership = project_service.get_project_member(existing.project_id, current_user.id)
-
     project_role = membership.role if membership else None
 
-    # Owners and editors: full update
     if project_role in (ProjectRole.owner, ProjectRole.editor):
         updated = service.update_task(id, task)
         return ResponseBase(code=200, message="Task updated successfully", data=updated)
@@ -96,8 +276,46 @@ def update_task(
     raise HTTPException(status_code=403, detail="You do not have permission to update this task")
 
 
-@router.get("/user/{id}", status_code=200, response_model=ResponseBase[List[TaskBase]],
-            dependencies=[Depends(get_current_user)])
+@router.get(
+    "/user/{id}",
+    status_code=200,
+    response_model=ResponseBase[List[TaskBase]],
+    dependencies=[Depends(get_current_user)],
+    summary="List tasks by user",
+    description="List tasks assigned to a given user.",
+    responses={
+        200: {
+            "description": "User tasks retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "User tasks retrieved successfully",
+                        "data": [
+                            {
+                                "id": 1,
+                                "title": "User Task",
+                                "description": "Task for user",
+                                "project_id": 1,
+                                "status": "pending",
+                                "due_date": None,
+                                "created_at": "2024-01-01T00:00:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Unauthorized",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated"}
+                }
+            },
+        },
+    },
+)
 def get_task_by_user_id(id: int, service: TaskService = Depends(get_task_service)):
     task = service.get_task_by_user(id)
     return ResponseBase(
@@ -107,8 +325,46 @@ def get_task_by_user_id(id: int, service: TaskService = Depends(get_task_service
     )
 
 
-@router.get("/project/{id}", status_code=200, response_model=ResponseBase[List[TaskBase]],
-            dependencies=[Depends(get_current_user)])
+@router.get(
+    "/project/{id}",
+    status_code=200,
+    response_model=ResponseBase[List[TaskBase]],
+    dependencies=[Depends(get_current_user)],
+    summary="List tasks by project",
+    description="List all tasks that belong to a given project.",
+    responses={
+        200: {
+            "description": "Project tasks retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code": 200,
+                        "message": "Project tasks retrieved successfully",
+                        "data": [
+                            {
+                                "id": 1,
+                                "title": "Project Task",
+                                "description": "Task for project",
+                                "project_id": 1,
+                                "status": "pending",
+                                "due_date": None,
+                                "created_at": "2024-01-01T00:00:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Unauthorized",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Not authenticated"}
+                }
+            },
+        },
+    },
+)
 def get_task_by_project_id(id: int, service: TaskService = Depends(get_task_service)):
     task = service.get_task_by_project(id)
     return ResponseBase(
