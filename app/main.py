@@ -3,6 +3,8 @@ from app.database import engine, Base
 import os
 
 from app.routers import users as users_router
+from app.routers import project as project_router
+from app.routers import task as task_router
 from dotenv import load_dotenv,find_dotenv
 
 # Load the environment variables from the .env file
@@ -13,8 +15,7 @@ if not os.getenv("SKIP_CREATE_ALL"):
     Base.metadata.create_all(bind=engine)
 
 app.include_router(users_router.router)
+app.include_router(project_router.router)
+app.include_router(task_router.router)
 
 
-@app.get("/")
-def root():
-    return {"message": "Taskr API is running"}
