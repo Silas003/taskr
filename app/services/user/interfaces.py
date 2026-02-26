@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Protocol, Optional
-from sqlalchemy.orm import Session
+from typing import Optional
+
 from app.models.User import User
-from app.schemas.User import UserCreate
+from app.schemas.dto import UserCreate
 
 
 class IUserService(ABC):
@@ -29,11 +29,11 @@ class IUserService(ABC):
         pass
 
     @abstractmethod
-    def delete_user(self,user_id: int) -> bool:
+    def delete_user(self, user_id: int) -> bool:
         """Delete a user."""
         pass
 
     @abstractmethod
-    def get_all_users(self,limit:int,offset:int):
+    def get_all_users(self, limit: int, offset: int):
         """Retrieve all users."""
         pass

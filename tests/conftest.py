@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
 from app.models.User import User
-from app.schemas.UserSchema import SystemRole
+from app.schemas.dto import SystemRole
 from app.security.password_manager import PasswordManager
 
 
