@@ -41,8 +41,8 @@ class ProjectService(IProjectService):
     def get_project_by_id(self, project_id):
         return self.repository.get_by_id(project_id)
 
-    def get_all_projects(self, skip: int = 0, limit: int = 10):
-        return self.repository.find_all(skip=skip, limit=limit)
+    def get_all_projects(self, skip: int = 0, limit: int = 10, name_contains: str | None = None):
+        return self.repository.find_all(skip=skip, limit=limit, name_contains=name_contains)
 
     def update_project(self, project_id, project_data):
         return self.repository.update(project_id, project_data)

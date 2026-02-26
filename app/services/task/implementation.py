@@ -45,8 +45,8 @@ class TaskService(ITaskService):
         """Delete a task by ID."""
         return self.repository.delete(task_id)
 
-    def get_all_tasks(self, limit: int, offset: int):
-        return self.repository.find_all(limit, offset)
+    def get_all_tasks(self, limit: int, offset: int, status: str | None = None):
+        return self.repository.find_all(limit, offset, status=status)
 
     def get_task_by_user(self, user_id, skip: int = 0, limit: int = 10):
         """Return tasks for a user with offset/limit pagination at the DB level."""
