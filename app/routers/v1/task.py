@@ -113,10 +113,13 @@ def get_task(id: int, service: TaskService = Depends(get_task_service)):
         },
     },
 )
-def get_all_tasks(skip: int = Query(0, ge=0, description="Items to skip for pagination"),
-                  limit: int = Query(10, ge=1, le=100, description="Maximum tasks to return"),
-                  service: TaskService = Depends(get_task_service)):
-    tasks = service.get_all_tasks(limit=limit, offset=skip)
+def get_all_tasks(
+    skip: int = Query(0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum tasks to return"),
+    status: str | None = Query(default=None, description="Filter tasks by exact status (e.g. 'pending', 'in_progress', 'done')"),
+    service: TaskService = Depends(get_task_service),
+):
+    tasks = service.get_all_tasks(limit=limit, offset=skip, status=status)
     return ResponseBase(code=200, message="Tasks retrieved successfully", data=tasks)
 
 

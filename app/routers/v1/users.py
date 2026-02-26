@@ -139,7 +139,7 @@ def user_access_control(
     dependencies=[Depends(get_current_user), Depends(require_system_role(SystemRole.admin))],
     summary="List all users (admin only)",
     description=(
-        "Return a paginated list of all users.\n\n"
+        "Return a paginated list of all users, with optional filtering by email and role.\n\n"
         "Requires system role `admin`."
     ),
     responses={
@@ -177,11 +177,14 @@ def user_access_control(
         },
     },
 )
-def get_all_users(skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
-                  limit: int = Query(default=10, ge=1, le=100, description="Maximum number of users to return"),
-                  service: UserService = Depends(get_user_service)):
-    users = service.get_all_users(skip=skip, limit=limit)
-    # Pydantic can turn list of ORM users into list of UserRead
+def get_all_users(
+    skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(default=10, ge=1, le=100, description="Maximum number of users to return"),
+    email_contains: str | None = Query(default=None, description="Filter users whose email contains this value (case-insensitive)"),
+    role: str | None = Query(default=None, description="Filter users by exact role (e.g. 'admin', 'member')"),
+    service: UserService = Depends(get_user_service),
+):
+    users = service.get_all_users(skip=skip, limit=limit, email_contains=email_contains, role=role)
     user_reads = [UserRead.from_orm(u) for u in users]
     return ResponseBase(code=HTTPStatus.OK, message="Users retrieved successfully", data=user_reads)
 

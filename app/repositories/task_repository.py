@@ -24,7 +24,7 @@ class ITaskRepository(ABC):
     def delete(self, task_id):
         pass
     @abstractmethod
-    def find_all(self, limit: int, offset: int):
+    def find_all(self, limit: int, offset: int, status: str | None = None):
         pass
 
     @abstractmethod
@@ -70,8 +70,11 @@ class TaskRepository(ITaskRepository):
         self.db.commit()
         return True
 
-    def find_all(self, limit: int, offset: int) -> List[Task]:
-        return self.db.query(Task).offset(offset).limit(limit).all()
+    def find_all(self, limit: int, offset: int, status: str | None = None) -> List[Task]:
+        q = self.db.query(Task)
+        if status:
+            q = q.filter(Task.status == status)
+        return q.offset(offset).limit(limit).all()
 
     def get_task_by_user(self, user_id: int, skip: int = 0, limit: int = 10) -> List[Task]:
         return (
