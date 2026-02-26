@@ -50,6 +50,24 @@ class IProjectRepository(ABC):
         """Save user to project."""
         pass
 
+    @abstractmethod
+    def get_member(self, project_id: int, user_id: int) -> Optional[ProjectMember]:
+        """Retrieve a specific member of a project."""
+        pass
+
+    @abstractmethod
+    def update_member_role(self, project_id: int, user_id: int, role: ProjectRole) -> ProjectMember:
+        """Update the role of a project member."""
+        pass
+
+    @abstractmethod
+    def remove_member(self, project_id: int, user_id: int) -> bool:
+        """Remove a member from a project."""
+        pass
+    @abstractmethod
+    def create_project_with_owner(self, project: Project, member: ProjectMember) -> Project:
+        """Create a new project with an owner."""
+
 class ProjectRepository(IProjectRepository):
     """SQLAlchemy-based implementation of IProjectRepository."""
 
@@ -66,22 +84,26 @@ class ProjectRepository(IProjectRepository):
         return self.db.query(Project).filter(Project.id==project_id).first()
 
     def update(self,id, project):
-        project = self.get_by_id(id)
-        if not project:
-            pass
+        db_project = self.get_by_id(id)
+        if not db_project:
+            return EntityNotFound("project",id)
         for key,value in project.items():
             setattr(project,key,value)
         self.db.commit()
         self.db.refresh(project)
         return project
 
-    def delete(self, project_id):
-        project = self.get_by_id(project_id)
-        if not project:
-            return False
-        self.db.delete(project)
-        self.db.commit()
-        return True
+    def delete(self, project_id: int) -> bool:
+        try:
+            project = self.get_by_id(project_id)
+            if not project:
+                return False
+            self.db.delete(project)
+            self.db.commit()
+            return True
+        except Exception:
+            self.db.rollback()
+            raise
 
     def find_all(self, skip: int = 0, limit: int = 10):
         return self.db.query(Project).offset(skip).limit(limit).all()
@@ -95,14 +117,73 @@ class ProjectRepository(IProjectRepository):
     def get_by_name(self,name)->Optional[Project]:
         return self.db.query(Project).filter(Project.name==name).first()
 
-    def save_user_to_project(self,project_member:ProjectMember):
-        project = self.get_by_id(project_member.project_id)
-        if not project:
-            raise EntityNotFound("project",project_member.project_id)
-        user = self.db.get(User,project_member.user_id)
-        if not user:
-            raise EntityNotFound("user",project_member.user_id)
+    def save_user_to_project(self, project_member: ProjectMember):
+        try:
+            project = self.get_by_id(project_member.project_id)
+            if not project:
+                raise EntityNotFound("project", project_member.project_id)
+            user = self.db.get(User, project_member.user_id)
+            if not user:
+                raise EntityNotFound("user", project_member.user_id)
+            self.db.add(project_member)
+            self.db.commit()
+            self.db.refresh(project_member)
+            return project_member
+        except EntityNotFound:
+            raise
+        except Exception:
+            self.db.rollback()
+            raise
 
-        self.db.add(project_member)
+    def get_member(self, project_id: int, user_id: int) -> Optional[ProjectMember]:
+        return (
+            self.db.query(ProjectMember)
+            .filter(ProjectMember.project_id == project_id, ProjectMember.user_id == user_id)
+            .first()
+        )
+
+    def update_member_role(self, project_id, user_id, role):
+        try:
+            member = (
+                self.db.query(ProjectMember)
+                .filter(
+                    ProjectMember.project_id == project_id,
+                    ProjectMember.user_id == user_id
+                )
+                .with_for_update()        # ← locks the row until commit
+                .first()
+            )
+            if not member:
+                raise EntityNotFound("project_member", f"{project_id}:{user_id}")
+            member.role = role.value if hasattr(role, "value") else str(role)
+            self.db.commit()
+            self.db.refresh(member)
+            return member
+        except EntityNotFound:
+            raise
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def remove_member(self, project_id: int, user_id: int) -> bool:
+        member = self.get_member(project_id, user_id)
+        if not member:
+            return False
+        self.db.delete(member)
         self.db.commit()
-        self.db.refresh(project_member)
+        return True
+
+    def create_project_with_owner(self, project: Project, member: ProjectMember) -> Project:
+        try:
+            self.db.add(project)
+            self.db.flush()                    # assigns project.id without committing
+            member.project_id = project.id
+            self.db.add(member)
+            self.db.commit()                   # single commit — both or neither
+            self.db.refresh(project)
+            return project
+        except Exception:
+            self.db.rollback()
+            raise
+
+
