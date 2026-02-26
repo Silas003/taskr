@@ -1,6 +1,7 @@
 from abc import ABC,abstractmethod
 from sqlalchemy.orm import Session
 
+from app.exceptions.CustomExceptions import EntityNotFound
 from app.models import Project
 from app.models.Task import Task
 from app.models.User import User
@@ -40,20 +41,24 @@ class TaskRepository(ITaskRepository):
         return self.db.get(Task,task_id)
 
     def update(self, task_id, task_data):
-        task = self.get_by_id(task_id)
-        if not task:
-            return None
-        for key, value in task_data.items():
-            setattr(task, key, value)
-        self.db.commit()
-        self.db.refresh(task)
-        return task
+        try:
+            task = self.get_by_id(task_id)
+            if not task:
+                return None
+            for key, value in task_data.items():
+                setattr(task, key, value)
+            self.db.commit()
+            self.db.refresh(task)
+            return task
+        except Exception:
+            self.db.rollback()
+            raise
 
     def delete(self, task_id)->bool:
-        task = self.get_by_id(task_id)
-        if not task:
+        db_task = self.get_by_id(task_id)
+        if not db_task:
             return False
-        self.db.delete(task)
+        self.db.delete(task_id)
         self.db.commit()
         return True
 

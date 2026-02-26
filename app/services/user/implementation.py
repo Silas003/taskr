@@ -1,9 +1,9 @@
-from typing import Optional, List
+from typing import Optional
 
 from app.exceptions.CustomExceptions import UserAlreadyExists, InvalidCredentials
 from app.models.User import User
 from app.repositories.user_repository import IUserRepository
-from app.schemas.User import UserCreate
+from app.schemas.dto import UserCreate
 from app.security.password_manager import PasswordManager
 from app.services.user.interfaces import IUserService
 from app.validators.user_validator import UserValidator
@@ -11,8 +11,6 @@ from app.validators.user_validator import UserValidator
 
 class UserService(IUserService):
     """Service layer for user-related operations."""
-
-
 
     def __init__(
             self,
@@ -145,5 +143,11 @@ class UserService(IUserService):
         """
         return self.repository.delete(user_id)
 
-    def get_all_users(self, limit: int, offset: int):
-        self.repository.find_all(limit, offset)
+    def get_all_users(self, skip: int = 0, limit: int = 10):
+        """Retrieve all users with pagination.
+
+        Args:
+            skip: Number of records to skip (offset).
+            limit: Maximum number of records to return.
+        """
+        return self.repository.find_all(limit=limit, offset=skip)

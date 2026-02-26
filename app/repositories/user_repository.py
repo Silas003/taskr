@@ -62,12 +62,16 @@ class UserRepository(IUserRepository):
         return user
 
     def delete(self, user_id: int) -> bool:
-        user = self.get_by_id(user_id)
-        if not user:
-            return False
-        self.db.delete(user)
-        self.db.commit()
-        return True
+        try:
+            user = self.get_by_id(user_id)
+            if not user:
+                return False
+            self.db.delete(user)
+            self.db.commit()
+            return True
+        except Exception:
+            self.db.rollback()
+            raise
 
     def find_all(self, limit: int, offset: int):
         return self.db.query(User).offset(offset).limit(limit).all()

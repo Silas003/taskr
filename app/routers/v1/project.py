@@ -1,7 +1,14 @@
 from http import HTTPStatus
 from typing import List
 
-from app.schemas.UserSchema import (
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import User, Project
+from app.repositories.project_repository import ProjectRepository
+from app.routers.v1.users import get_current_user, require_project_role
+from app.schemas.dto import (
     ProjectCreate,
     ProjectRole,
     ProjectRead,
@@ -10,13 +17,6 @@ from app.schemas.UserSchema import (
     ProjectMemberRead,
     SystemRole,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-
-from app.database import get_db
-from app.models import User, Project
-from app.repositories.project_repository import ProjectRepository
-from app.routers.v1.users import get_current_user, require_project_role
 from app.schemas.response import ResponseBase
 from app.services.project.implementation import ProjectService
 
@@ -71,6 +71,15 @@ def require_project_membership_admin(
     raise HTTPException(status_code=403, detail="You do not have permission to manage members for this project")
 
 
+
+@router.get("/by-name",
+            dependencies=[Depends(get_current_user)],
+            response_model=ResponseBase[ProjectRead])
+def get_project_by_name(name: str, service: ProjectService = Depends(get_project_service)):
+    project = service.get_project_by_name(name)
+    return ResponseBase(code=200, message="Project retrieved successfully", data=project)
+
+
 @router.get("/all", dependencies=[Depends(get_current_user)],
             status_code=HTTPStatus.OK,
             response_model=ResponseBase[List[ProjectRead]])
@@ -82,13 +91,6 @@ def get_all_projects(
     projects = service.get_all_projects(skip=skip, limit=limit)
     return ResponseBase(code=200, message="Projects retrieved successfully", data=projects)
 
-
-@router.get("/by-name",
-            dependencies=[Depends(get_current_user)],
-            response_model=ResponseBase[ProjectRead])
-def get_project_by_name(name: str, service: ProjectService = Depends(get_project_service)):
-    project = service.get_project_by_name(name)
-    return ResponseBase(code=200, message="Project retrieved successfully", data=project)
 
 
 @router.get("/{id}", response_model=ResponseBase[ProjectRead])
