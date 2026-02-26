@@ -17,7 +17,7 @@ from app.routers.v1.users import (
     user_access_control,
 )
 from app.models.User import User
-from app.schemas.UserSchema import SystemRole
+from app.schemas.dto import SystemRole
 from app.exceptions.CustomExceptions import UserAlreadyExists, InvalidCredentials
 
 
@@ -129,7 +129,7 @@ class TestRegisterUser:
 class TestLogin:
     def test_login_success_returns_token(self, client_unauthenticated):
         client, svc = client_unauthenticated
-        with patch("app.routers.users.JwtManager") as mock_jwt:
+        with patch("app.routers.v1.users.JwtManager") as mock_jwt:
             mock_jwt.create_access_token.return_value = "access_tok"
             mock_jwt.create_refresh_token.return_value = "refresh_tok"
             resp = client.post(
@@ -142,7 +142,7 @@ class TestLogin:
 
     def test_login_sets_refresh_cookie(self, client_unauthenticated):
         client, svc = client_unauthenticated
-        with patch("app.routers.users.JwtManager") as mock_jwt:
+        with patch("app.routers.v1.users.JwtManager") as mock_jwt:
             mock_jwt.create_access_token.return_value = "access_tok"
             mock_jwt.create_refresh_token.return_value = "refresh_tok"
             resp = client.post(
@@ -178,8 +178,8 @@ class TestReadOwnUser:
 class TestRefreshToken:
     def test_refresh_success(self, client_unauthenticated):
         client, _ = client_unauthenticated
-        with patch("app.routers.users.JwtManager") as mock_jwt:
-            mock_jwt.decode_token.return_value = {"sub": "1"}
+        with patch("app.routers.v1.users.JwtManager") as mock_jwt:
+            mock_jwt.decode_token.return_value = {"sub": "1", "type": "refresh"}
             mock_jwt.create_access_token.return_value = "new_access"
             mock_jwt.create_refresh_token.return_value = "new_refresh"
             client.cookies.set("refresh", "valid_refresh_token")
@@ -194,7 +194,7 @@ class TestRefreshToken:
 
     def test_refresh_with_invalid_token_returns_401(self, client_unauthenticated):
         client, _ = client_unauthenticated
-        with patch("app.routers.users.JwtManager") as mock_jwt:
+        with patch("app.routers.v1.users.JwtManager") as mock_jwt:
             mock_jwt.decode_token.side_effect = ValueError("bad token")
             client.cookies.set("refresh", "invalid")
             resp = client.post("/users/refresh")
