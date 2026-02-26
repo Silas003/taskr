@@ -9,6 +9,12 @@ class ProjectService(IProjectService):
 
 
 
+    def get_project(self, project_id: int):
+        pass
+
+    def get_project_members(self, project_id: int, user_id: int):
+        pass
+
     def __init__(self, repository: IProjectRepository = None):
         self.repository = repository
 

@@ -1,6 +1,6 @@
 from app.models import Task
 from app.repositories.task_repository import TaskRepository, ITaskRepository
-from app.schemas.UserSchema import TaskCreate, TaskBase, TaskStatusEnum, TaskUpdate
+from app.schemas.dto import TaskCreate, TaskUpdate
 from app.services.task.interface import ITaskService
 
 

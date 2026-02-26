@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 
 from app.exceptions.CustomExceptions import UserAlreadyExists, InvalidCredentials
 from app.models.User import User
@@ -11,8 +11,6 @@ from app.validators.user_validator import UserValidator
 
 class UserService(IUserService):
     """Service layer for user-related operations."""
-
-
 
     def __init__(
             self,
