@@ -1,10 +1,12 @@
 from abc import ABC,abstractmethod
 
+from app.models.Project import Project
+
 
 class IProjectService(ABC):
 
     @abstractmethod
-    def create_project(self,project_data):
+    def create_project(self,project_data)->Project:
         pass
 
     @abstractmethod
