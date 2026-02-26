@@ -1,51 +1,63 @@
 from enum import Enum
 from typing import Optional
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
-class UserBase(BaseModel):
-    id:int
-    username:str
-    email:EmailStr
-    full_name:str
-    created_at:str
-    updated_at:str
+from app.schemas.UserSchema import SystemRole
 
-class UserCreate(UserBase):
-    password:str
 
-class UserUpdate(UserBase):
-    password:str
+# User schemas
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    full_name: Optional[str] = None
+    role:SystemRole = SystemRole.member
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=8)
+
+class UserRead(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    role:SystemRole
+
+    class Config:
+        orm_mode = True
+
+# Auth response
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 class ProjectBase(BaseModel):
-    id:int
-    name:str
-    description:Optional[str]
-    owner_id:int
-    created_at:str
+    id: int
+    name: str
+    description: Optional[str]
+    owner_id: int
+    created_at: datetime
 
-class ProjectCreate(ProjectBase):
-    pass
+    class Config:
+        orm_mode = True
 
-class ProjectUpdate(ProjectBase):
-    pass
-
-class TaskStatusEnum(Enum):
+class TaskStatusEnum(str, Enum):
     pending = "pending"
     in_progress = "in_progress"
     completed = "completed"
 
 class TaskBase(BaseModel):
-    id:int
-    title:str
-    description:Optional[str]
-    project_id:int
-    status:TaskStatusEnum
-    due_date:Optional[str]
-    created_at:str
+    id: int
+    title: str
+    description: Optional[str]
+    project_id: int
+    status: TaskStatusEnum
+    due_date: Optional[datetime]
+    created_at: datetime
 
-class TaskCreate(TaskBase):
-    pass
+    class Config:
+        orm_mode = True
 
-class TaskUpdate(TaskBase):
-    pass
