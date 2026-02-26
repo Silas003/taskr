@@ -3,18 +3,18 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 import os
+from dotenv import load_dotenv,find_dotenv
 
-
-
+load_dotenv(find_dotenv())
 
 DATABASE_URL = URL.create(
-        drivername=os.getenv("DRIVER"),
-        username=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT"),
-        database=os.getenv("DB_NAME"),
-    )
+    drivername=os.environ.get("DB_DRIVER", "postgresql+psycopg2"),
+    username=os.environ.get("DB_USER", "postgres"),
+    password=os.environ.get("DB_PASS", "postgres"),
+    host=os.environ.get("DB_HOST", "localhost"),
+    port=int(os.environ.get("DB_PORT", 5432)),
+    database=os.environ.get("DB_NAME", "taskr"),
+)
 
 engine = create_engine(DATABASE_URL)
 
