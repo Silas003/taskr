@@ -22,8 +22,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 import os
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/token")
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/token")
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     """Dependency factory that creates a UserService with repository for the current request."""
