@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
+from typing import Optional, List
 
 from sqlalchemy.orm import Session
 
+from app.exceptions.CustomExceptions import EntityNotFound
 from app.models.Project import Project, ProjectMember
 from app.models.User import User
-from typing import Optional, List
-from app.exceptions.CustomExceptions import  EntityNotFound
-from app.schemas.UserSchema import ProjectRole
+from app.schemas.dto import ProjectRole
+
+
 class IProjectRepository(ABC):
     """Abstract base class defining the project repository contract."""
 
@@ -21,7 +23,7 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
-    def update(self,id, project):
+    def update(self, id, project):
         """Update an existing project."""
         pass
 
@@ -31,22 +33,22 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
-    def find_all(self,skip:int,limit:int):
+    def find_all(self, skip: int, limit: int):
         """Retrieve all projects with pagination."""
         pass
 
     @abstractmethod
-    def get_by_user(self,user_id):
+    def get_by_user(self, user_id):
         """Retrieve all projects by user."""
         pass
 
     @abstractmethod
-    def get_by_name(self,name):
+    def get_by_name(self, name):
         """Retrieve all projects by name."""
         pass
 
     @abstractmethod
-    def save_user_to_project(self,project_member:ProjectMember):
+    def save_user_to_project(self, project_member: ProjectMember):
         """Save user to project."""
         pass
 
@@ -64,31 +66,33 @@ class IProjectRepository(ABC):
     def remove_member(self, project_id: int, user_id: int) -> bool:
         """Remove a member from a project."""
         pass
+
     @abstractmethod
     def create_project_with_owner(self, project: Project, member: ProjectMember) -> Project:
         """Create a new project with an owner."""
 
+
 class ProjectRepository(IProjectRepository):
     """SQLAlchemy-based implementation of IProjectRepository."""
 
-    def __init__(self, db:Session):
+    def __init__(self, db: Session):
         self.db = db
 
-    def save(self, project:Project)->Project:
+    def save(self, project: Project) -> Project:
         self.db.add(project)
         self.db.commit()
         self.db.refresh(project)
         return project
 
     def get_by_id(self, project_id):
-        return self.db.query(Project).filter(Project.id==project_id).first()
+        return self.db.query(Project).filter(Project.id == project_id).first()
 
-    def update(self,id, project):
+    def update(self, id, project):
         db_project = self.get_by_id(id)
         if not db_project:
-            return EntityNotFound("project",id)
-        for key,value in project.items():
-            setattr(project,key,value)
+            raise EntityNotFound("project", id)
+        for key, value in project.items():
+            setattr(project, key, value)
         self.db.commit()
         self.db.refresh(project)
         return project
@@ -108,14 +112,14 @@ class ProjectRepository(IProjectRepository):
     def find_all(self, skip: int = 0, limit: int = 10):
         return self.db.query(Project).offset(skip).limit(limit).all()
 
-    def get_by_user(self,user_id)->List[Optional[Project]]:
-        user = self.db.get(User,user_id)
+    def get_by_user(self, user_id) -> List[Optional[Project]]:
+        user = self.db.get(User, user_id)
         if user is not None:
             return user.projects
         return []
 
-    def get_by_name(self,name)->Optional[Project]:
-        return self.db.query(Project).filter(Project.name==name).first()
+    def get_by_name(self, name) -> Optional[Project]:
+        return self.db.query(Project).filter(Project.name == name).first()
 
     def save_user_to_project(self, project_member: ProjectMember):
         try:
@@ -150,7 +154,7 @@ class ProjectRepository(IProjectRepository):
                     ProjectMember.project_id == project_id,
                     ProjectMember.user_id == user_id
                 )
-                .with_for_update()        # ← locks the row until commit
+                .with_for_update()  # ← locks the row until commit
                 .first()
             )
             if not member:
@@ -176,14 +180,12 @@ class ProjectRepository(IProjectRepository):
     def create_project_with_owner(self, project: Project, member: ProjectMember) -> Project:
         try:
             self.db.add(project)
-            self.db.flush()                    # assigns project.id without committing
+            self.db.flush()  # assigns project.id without committing
             member.project_id = project.id
             self.db.add(member)
-            self.db.commit()                   # single commit — both or neither
+            self.db.commit()  # single commit — both or neither
             self.db.refresh(project)
             return project
         except Exception:
             self.db.rollback()
             raise
-
-

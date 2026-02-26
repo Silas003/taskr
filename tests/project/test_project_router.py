@@ -253,11 +253,8 @@ class TestGetProjectByName:
     def test_returns_project_by_name(self, client_as_alice):
         client, svc = client_as_alice
         resp = client.get("/project/by-name?name=Alpha")
-        # NOTE: /by-name is shadowed by /{id} in the router because /{id} is
-        # registered first. FastAPI tries to cast "by-name" to int and returns 422.
-        # This is a router ordering bug in the application code - the /by-name route
-        # should be defined BEFORE /{id} in the router. Asserting actual behaviour here.
-        assert resp.status_code == 422
+        assert resp.status_code == 200
+        svc.get_project_by_name.assert_called_once_with("Alpha")
 
     def test_get_by_name_service_method(self, client_as_alice):
         """Test the service is correctly called when route ordering is fixed."""

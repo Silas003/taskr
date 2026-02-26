@@ -1,15 +1,16 @@
 """
 Tests for ProjectRepository (app/repositories/project_repository.py)
 """
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
 
-from app.repositories.project_repository import ProjectRepository
+from app.exceptions.CustomExceptions import EntityNotFound
 from app.models.Project import Project, ProjectMember
 from app.models.User import User
-from app.schemas.UserSchema import ProjectRole
-from app.exceptions.CustomExceptions import EntityNotFound
+from app.repositories.project_repository import ProjectRepository
+from app.schemas.dto import ProjectRole
 
 
 @pytest.fixture
@@ -191,7 +192,10 @@ class TestGetMember:
 # ---------------------------------------------------------------------------
 class TestUpdateMemberRole:
     def test_updates_role_successfully(self, repo, mock_db, sample_member):
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_member
+        mock_chain = mock_db.query.return_value.filter.return_value
+        mock_chain.with_for_update.return_value = mock_chain
+        mock_chain.first.return_value = sample_member
+
         result = repo.update_member_role(1, 2, ProjectRole.viewer)
         assert sample_member.role == ProjectRole.viewer.value
         mock_db.commit.assert_called_once()
@@ -199,10 +203,11 @@ class TestUpdateMemberRole:
         assert result is sample_member
 
     def test_raises_entity_not_found_when_member_missing(self, repo, mock_db):
-        mock_db.query.return_value.filter.return_value.first.return_value = None
+        mock_chain = mock_db.query.return_value.filter.return_value
+        mock_chain.with_for_update.return_value = mock_chain
+        mock_chain.first.return_value = None
         with pytest.raises(EntityNotFound):
             repo.update_member_role(1, 999, ProjectRole.editor)
-
 
 # ---------------------------------------------------------------------------
 # remove_member()

@@ -73,35 +73,34 @@ class TestInit:
 # ---------------------------------------------------------------------------
 class TestCreateProject:
     def test_creates_project_and_adds_owner_as_member(self, service, mock_repo, project_data, sample_project, sample_member):
-        mock_repo.save.return_value = sample_project
-        mock_repo.save_user_to_project.return_value = sample_member
+        # New impl uses create_project_with_owner — single atomic call
+        mock_repo.create_project_with_owner.return_value = sample_project
 
         result = service.create_project(project_data)
 
-        mock_repo.save.assert_called_once()
-        mock_repo.save_user_to_project.assert_called_once()
-        assert result is sample_project
+        mock_repo.create_project_with_owner.assert_called_once()
+        # result is the local project object built in the service, not the repo return value
+        assert result.name == project_data.name
+        assert result.owner_id == project_data.owner_id
 
     def test_saved_project_has_correct_fields(self, service, mock_repo, project_data, sample_project):
-        mock_repo.save.return_value = sample_project
-        mock_repo.save_user_to_project.return_value = MagicMock()
+        mock_repo.create_project_with_owner.return_value = sample_project
 
         service.create_project(project_data)
 
-        saved: Project = mock_repo.save.call_args[0][0]
-        assert saved.name == project_data.name
-        assert saved.owner_id == project_data.owner_id
+        # Use .args for reliable positional arg access across all mock versions
+        saved_project: Project = mock_repo.create_project_with_owner.call_args.args[0]
+        assert saved_project.name == project_data.name
+        assert saved_project.owner_id == project_data.owner_id
 
     def test_owner_added_as_owner_role(self, service, mock_repo, project_data, sample_project):
-        mock_repo.save.return_value = sample_project
-        mock_repo.save_user_to_project.return_value = MagicMock()
+        mock_repo.create_project_with_owner.return_value = sample_project
 
         service.create_project(project_data)
 
-        saved_member: ProjectMember = mock_repo.save_user_to_project.call_args[0][0]
+        saved_member: ProjectMember = mock_repo.create_project_with_owner.call_args.args[1]
         assert saved_member.role == ProjectRole.owner
         assert saved_member.user_id == project_data.owner_id
-        assert saved_member.project_id == sample_project.id
 
 
 # ---------------------------------------------------------------------------
