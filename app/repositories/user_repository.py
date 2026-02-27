@@ -33,8 +33,8 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
-    def find_all(self, limit: int, offset: int):
-        """Retrieve all users with pagination."""
+    def find_all(self, limit: int, offset: int, email_contains: str | None = None, role: str | None = None):
+        """Retrieve all users with pagination and optional filtering."""
         pass
 
 
@@ -73,5 +73,10 @@ class UserRepository(IUserRepository):
             self.db.rollback()
             raise
 
-    def find_all(self, limit: int, offset: int):
-        return self.db.query(User).offset(offset).limit(limit).all()
+    def find_all(self, limit: int, offset: int, email_contains: str | None = None, role: str | None = None):
+        q = self.db.query(User)
+        if email_contains:
+            q = q.filter(User.email.ilike(f"%{email_contains}%"))
+        if role:
+            q = q.filter(User.role == role)
+        return q.offset(offset).limit(limit).all()
