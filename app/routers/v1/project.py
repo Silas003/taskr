@@ -118,7 +118,7 @@ def get_project_by_name(name: str, service: ProjectService = Depends(get_project
     response_model=ResponseBase[List[ProjectRead]],
     summary="List all projects",
     description=(
-        "List projects with pagination.\n\n"
+        "List projects with pagination and optional name filtering.\n\n"
         "Accessible to authenticated users; visibility may be filtered in service layer."
     ),
     responses={
@@ -154,9 +154,10 @@ def get_project_by_name(name: str, service: ProjectService = Depends(get_project
 def get_all_projects(
         skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
         limit: int = Query(default=10, ge=1, le=100, description="Maximum projects to return"),
+        name_contains: str | None = Query(default=None, description="Filter projects whose name contains this value (case-insensitive)"),
         service: ProjectService = Depends(get_project_service)
 ):
-    projects = service.get_all_projects(skip=skip, limit=limit)
+    projects = service.get_all_projects(skip=skip, limit=limit, name_contains=name_contains)
     return ResponseBase(code=200, message="Projects retrieved successfully", data=projects)
 
 
@@ -377,8 +378,13 @@ def delete_project(id: int, service: ProjectService = Depends(get_project_servic
         },
     },
 )
-def get_projects_by_user(user_id: int, service: ProjectService = Depends(get_project_service)):
-    project = service.get_project_by_user(user_id)
+def get_projects_by_user(
+    user_id: int,
+    skip: int = Query(default=0, ge=0, description="Items to skip for pagination"),
+    limit: int = Query(default=10, ge=1, le=100, description="Maximum projects to return"),
+    service: ProjectService = Depends(get_project_service),
+):
+    project = service.get_project_by_user(user_id, skip=skip, limit=limit)
     return ResponseBase(code=200, message="Projects retrieved successfully", data=project)
 
 

@@ -143,11 +143,11 @@ class UserService(IUserService):
         """
         return self.repository.delete(user_id)
 
-    def get_all_users(self, skip: int = 0, limit: int = 10):
+    def get_all_users(self, skip: int = 0, limit: int = 10, email_contains: str | None = None, role: str | None = None):
         """Retrieve all users with pagination.
 
         Args:
             skip: Number of records to skip (offset).
             limit: Maximum number of records to return.
         """
-        return self.repository.find_all(limit=limit, offset=skip)
+        return self.repository.find_all(limit=limit, offset=skip, email_contains=email_contains, role=role)
