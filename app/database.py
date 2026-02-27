@@ -1,19 +1,21 @@
+from dotenv import load_dotenv,find_dotenv
+
+from app.core.config import settings
+
+load_dotenv(find_dotenv())
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
-import os
-from dotenv import load_dotenv,find_dotenv
 
-load_dotenv(find_dotenv())
 
 DATABASE_URL = URL.create(
-    drivername=os.environ.get("DB_DRIVER", "postgresql+psycopg2"),
-    username=os.environ.get("DB_USER", "postgres"),
-    password=os.environ.get("DB_PASS", "password"),
-    host=os.environ.get("DB_HOST", "127.0.0.1"),
-    port=int(os.environ.get("DB_PORT", 5432)),
-    database=os.environ.get("DB_NAME", "taskr"),
+    drivername=settings.DRIVER,
+    username=settings.DB_USER,
+    password=settings.DB_PASSWORD,
+    host=settings.DB_HOST,
+    port=settings.DB_PORT,
+    database=settings.DB_NAME,
 )
 
 engine = create_engine(DATABASE_URL)
