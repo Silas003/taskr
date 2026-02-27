@@ -10,7 +10,7 @@ load_dotenv(find_dotenv())
 DATABASE_URL = URL.create(
     drivername=os.environ.get("DB_DRIVER", "postgresql+psycopg2"),
     username=os.environ.get("DB_USER", "postgres"),
-    password=os.environ.get("DB_PASS", "postgres"),
+    password=os.environ.get("DB_PASS", "password"),
     host=os.environ.get("DB_HOST", "127.0.0.1"),
     port=int(os.environ.get("DB_PORT", 5432)),
     database=os.environ.get("DB_NAME", "taskr"),
