@@ -11,7 +11,7 @@ It implements a realistic user workflow (registration, authentication, roles), p
 - [Architecture Overview](#architecture-overview)
 - [Domain Model](#domain-model)
 - [Requirements](#requirements)
-- [Configuration  Environment Variables](#configuration--environment-variables)
+- [Configuration | Environment Variables](#configuration--environment-variables)
 - [Local Development Setup](#local-development-setup)
 - [Running with Docker](#running-with-docker)
 - [Database & Migrations](#database--migrations)
