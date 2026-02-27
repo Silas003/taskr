@@ -1,0 +1,72 @@
+name: Docker Compose CI
+
+on:
+  pull_request:
+    branches: [ master, develop ]
+  push:
+    branches: [ master, develop, feature/* ]
+
+jobs:
+  integration:
+    name: Build, Test & Verify Containers
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Verify Docker & Compose versions
+      - name: Check Docker version
+        run: docker --version
+
+      - name: Check Docker Compose version
+        run: docker compose version
+
+      # 3️⃣ Build images
+      - name: Build services
+        run: docker compose build
+
+      # 4️⃣ Start services in background
+      - name: Start services
+        run: docker compose up -d
+
+      # 5️⃣ Wait for Postgres to be healthy
+      - name: Wait for DB healthcheck
+        run: |
+          echo "Waiting for database..."
+          for i in {1..20}; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' taskr_db 2>/dev/null || echo "starting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Database is healthy!"
+              break
+            fi
+            sleep 3
+          done
+
+      # 6️⃣ Run pytest inside container
+      - name: Run tests inside container
+        run: docker compose exec -T app pytest
+
+      # 7️⃣ Wait for FastAPI to start
+      - name: Wait for API
+        run: |
+          echo "Waiting for API..."
+          for i in {1..20}; do
+            curl -s http://localhost:8000/docs && break
+            sleep 3
+          done
+
+      # 8️⃣ Verify API endpoint
+      - name: Health check API
+        run: curl --fail http://localhost:8000/docs
+
+      # 9️⃣ Print logs if failure
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      # 🔟 Shutdown containers
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
