@@ -15,7 +15,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: password
           POSTGRES_DB: taskr
         ports:
           - 5432:5432
@@ -26,12 +26,12 @@ jobs:
           --health-retries 5
 
     env:
-      DB_DRIVER: postgresql+psycopg2
-      DB_USER: postgres
-      DB_PASS: postgres
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_NAME: taskr
+      DRIVERF: postgresql+psycopg2
+      DB_FUSERNAME: postgres
+      DB_FPASS: password
+      DB_FHOST: 127.0.0.1
+      DB_FPORT: 5432
+      DB_FNAME: taskr
 
     steps:
       - uses: actions/checkout@v4
